@@ -17,7 +17,6 @@
             height: 100vh;
             overflow: hidden;
             user-select: none;
-            cursor: pointer;
         }
         .container {
             flex: 1;
@@ -26,9 +25,11 @@
             align-items: center;
             width: 100%;
             text-align: center;
+            cursor: pointer;
         }
         .bid-text {
             font-weight: bold;
+            width: 100%;
         }
         #last-bid {
             font-size: clamp(2rem, 5vw, 4rem);
@@ -50,6 +51,8 @@
             top: 15px;
             right: 15px;
             z-index: 10;
+            display: flex;
+            gap: 10px;
         }
         button {
             background: rgba(255, 255, 255, 0.1);
@@ -59,35 +62,118 @@
             font-size: 1rem;
             border-radius: 8px;
             cursor: pointer;
-            margin-left: 10px;
             backdrop-filter: blur(5px);
+            transition: background 0.2s;
         }
         button:hover {
             background: rgba(255, 255, 255, 0.25);
         }
+        
+        /* Settings Modal Styles */
+        #settings-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            cursor: default;
+        }
+        .modal-content {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 300px;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .setting-row label {
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+        .setting-row input {
+            width: 60px;
+            padding: 5px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+        }
+        .btn-save { background: #00ff88; color: black; border: none; font-weight: bold; }
+        .btn-save:hover { background: #00cc6a; }
+        .btn-close { background: transparent; border: 1px solid #555; }
     </style>
 </head>
-<body onclick="advanceBid(event)">
+<body>
 
     <div class="controls">
+        <button onclick="toggleSettings()">Settings</button>
         <button onclick="undoBid(event)">Undo</button>
         <button onclick="resetBid(event)">Reset Base</button>
     </div>
 
-    <div id="last-bid" class="bid-text container">Waiting...</div>
-    <div id="current-bid" class="bid-text container">30 Lakh</div>
-    <div id="next-bid" class="bid-text container">Next: 35 Lakh</div>
+    <div id="last-bid" class="bid-text container" onclick="advanceBid(event)">Waiting...</div>
+    <div id="current-bid" class="bid-text container" onclick="advanceBid(event)">30 Lakh</div>
+    <div id="next-bid" class="bid-text container" onclick="advanceBid(event)">Next: 35 Lakh</div>
+
+    <div id="settings-modal" onclick="closeModalOnOutsideClick(event)">
+        <div class="modal-content">
+            <h3>Increments (in Lakhs)</h3>
+            <div class="setting-row">
+                <label>Under 1 Crore:</label>
+                <input type="number" id="inc-tier1" value="5">
+            </div>
+            <div class="setting-row">
+                <label>1 Cr to 2 Cr:</label>
+                <input type="number" id="inc-tier2" value="10">
+            </div>
+            <div class="setting-row">
+                <label>2 Cr to 5 Cr:</label>
+                <input type="number" id="inc-tier3" value="20">
+            </div>
+            <div class="setting-row">
+                <label>5 Cr and above:</label>
+                <input type="number" id="inc-tier4" value="25">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-close" onclick="toggleSettings()">Cancel</button>
+                <button class="btn-save" onclick="saveSettings()">Save</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         let bidHistory = [];
         let currentAmount = 3000000; // Default base price 30L
+        
+        // Default increments in actual values (convert from Lakhs)
+        let incTier1 = 500000;
+        let incTier2 = 1000000;
+        let incTier3 = 2000000;
+        let incTier4 = 2500000;
 
-        // Official IPL increment rules
         function getNextIncrement(bid) {
-            if (bid < 10000000) return 500000;       // Under 1 Cr: 5 Lakhs
-            if (bid < 20000000) return 1000000;      // 1 Cr to 2 Cr: 10 Lakhs
-            if (bid < 50000000) return 2000000;      // 2 Cr to 5 Cr: 20 Lakhs
-            return 2500000;                          // 5 Cr and above: 25 Lakhs
+            if (bid < 10000000) return incTier1;       
+            if (bid < 20000000) return incTier2;      
+            if (bid < 50000000) return incTier3;      
+            return incTier4;                          
         }
 
         function formatBid(amount) {
@@ -109,14 +195,14 @@
         }
 
         function advanceBid(e) {
-            if(e.target.tagName === 'BUTTON') return; // Ignore button clicks
+            if(e && e.target.tagName === 'BUTTON') return; 
             bidHistory.push(currentAmount);
             currentAmount += getNextIncrement(currentAmount);
             updateUI();
         }
 
         function undoBid(e) {
-            e.stopPropagation();
+            if(e) e.stopPropagation();
             if (bidHistory.length > 0) {
                 currentAmount = bidHistory.pop();
                 updateUI();
@@ -124,13 +210,47 @@
         }
 
         function resetBid(e) {
-            e.stopPropagation();
-            let base = prompt("Enter new base price in Lakhs (e.g., 30, 50, 100, 200):", "30");
+            if(e) e.stopPropagation();
+            let base = prompt("Enter new base price in Lakhs (e.g., 30, 50, 100):", "30");
             if (base && !isNaN(base)) {
                 currentAmount = parseFloat(base) * 100000;
                 bidHistory = [];
                 updateUI();
             }
+        }
+
+        // --- Spacebar Logic ---
+        document.addEventListener('keydown', function(event) {
+            // Check if user is typing in an input field (so space doesn't trigger bid)
+            if (document.activeElement.tagName === 'INPUT') return;
+            
+            // Check if settings modal is open
+            if (document.getElementById('settings-modal').style.display === 'flex') return;
+
+            if (event.code === 'Space') {
+                event.preventDefault(); // Prevent page from scrolling down
+                advanceBid();
+            }
+        });
+
+        // --- Settings Logic ---
+        function toggleSettings() {
+            const modal = document.getElementById('settings-modal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function closeModalOnOutsideClick(e) {
+            if(e.target.id === 'settings-modal') toggleSettings();
+        }
+
+        function saveSettings() {
+            incTier1 = parseFloat(document.getElementById('inc-tier1').value) * 100000 || incTier1;
+            incTier2 = parseFloat(document.getElementById('inc-tier2').value) * 100000 || incTier2;
+            incTier3 = parseFloat(document.getElementById('inc-tier3').value) * 100000 || incTier3;
+            incTier4 = parseFloat(document.getElementById('inc-tier4').value) * 100000 || incTier4;
+            
+            updateUI(); // Refresh next bid UI
+            toggleSettings();
         }
 
         updateUI(); // Initial render
