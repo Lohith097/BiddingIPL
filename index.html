@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPL Auction Tracker</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #121212;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            cursor: pointer;
+        }
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            text-align: center;
+        }
+        .bid-text {
+            font-weight: bold;
+        }
+        #last-bid {
+            font-size: clamp(2rem, 5vw, 4rem);
+            color: rgba(255, 255, 255, 0.4);
+            padding-top: 10vh;
+        }
+        #current-bid {
+            font-size: clamp(4rem, 10vw, 8rem);
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+        }
+        #next-bid {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            color: rgba(255, 255, 255, 0.4);
+            padding-bottom: 10vh;
+        }
+        .controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 10;
+        }
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-left: 10px;
+            backdrop-filter: blur(5px);
+        }
+        button:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+    </style>
+</head>
+<body onclick="advanceBid(event)">
+
+    <div class="controls">
+        <button onclick="undoBid(event)">Undo</button>
+        <button onclick="resetBid(event)">Reset Base</button>
+    </div>
+
+    <div id="last-bid" class="bid-text container">Waiting...</div>
+    <div id="current-bid" class="bid-text container">30 Lakh</div>
+    <div id="next-bid" class="bid-text container">Next: 35 Lakh</div>
+
+    <script>
+        let bidHistory = [];
+        let currentAmount = 3000000; // Default base price 30L
+
+        // Official IPL increment rules
+        function getNextIncrement(bid) {
+            if (bid < 10000000) return 500000;       // Under 1 Cr: 5 Lakhs
+            if (bid < 20000000) return 1000000;      // 1 Cr to 2 Cr: 10 Lakhs
+            if (bid < 50000000) return 2000000;      // 2 Cr to 5 Cr: 20 Lakhs
+            return 2500000;                          // 5 Cr and above: 25 Lakhs
+        }
+
+        function formatBid(amount) {
+            if (amount === 0) return "---";
+            if (amount < 10000000) {
+                return (amount / 100000) + " Lakh";
+            } else {
+                return (amount / 10000000).toFixed(2).replace(/\.00$/, '') + " Crore";
+            }
+        }
+
+        function updateUI() {
+            const lastAmount = bidHistory.length > 0 ? bidHistory[bidHistory.length - 1] : 0;
+            const nextAmount = currentAmount + getNextIncrement(currentAmount);
+
+            document.getElementById('last-bid').innerText = lastAmount === 0 ? "Waiting..." : "Last: " + formatBid(lastAmount);
+            document.getElementById('current-bid').innerText = formatBid(currentAmount);
+            document.getElementById('next-bid').innerText = "Next: " + formatBid(nextAmount);
+        }
+
+        function advanceBid(e) {
+            if(e.target.tagName === 'BUTTON') return; // Ignore button clicks
+            bidHistory.push(currentAmount);
+            currentAmount += getNextIncrement(currentAmount);
+            updateUI();
+        }
+
+        function undoBid(e) {
+            e.stopPropagation();
+            if (bidHistory.length > 0) {
+                currentAmount = bidHistory.pop();
+                updateUI();
+            }
+        }
+
+        function resetBid(e) {
+            e.stopPropagation();
+            let base = prompt("Enter new base price in Lakhs (e.g., 30, 50, 100, 200):", "30");
+            if (base && !isNaN(base)) {
+                currentAmount = parseFloat(base) * 100000;
+                bidHistory = [];
+                updateUI();
+            }
+        }
+
+        updateUI(); // Initial render
+    </script>
+</body>
+</html>
