@@ -125,8 +125,13 @@
 
     <div class="controls">
         <button onclick="toggleSettings()">Settings</button>
-        <button onclick="undoBid(event)">Undo</button>
-        <button onclick="resetBid(event)">Reset Base</button>
+        <button onclick="undoBid(event)">Undo (K)</button>
+        
+        <button id="btn-base1" onclick="setBase(30)">Base: 30L</button>
+        <button id="btn-base2" onclick="setBase(50)">Base: 50L</button>
+        <button id="btn-base3" onclick="setBase(200)">Base: 2Cr</button>
+        
+        <button onclick="resetBid(event)">Custom Base</button>
     </div>
 
     <div id="last-bid" class="bid-text container" onclick="advanceBid(event)">Waiting...</div>
@@ -134,6 +139,7 @@
     <div id="next-bid" class="bid-text container" onclick="advanceBid(event)">Next: 35 Lakh</div>
 
     <div id="settings-modal" onclick="closeModalOnOutsideClick(event)">
+
         <div class="modal-content">
             <h3>Increments (in Lakhs)</h3>
             <div class="setting-row">
@@ -151,6 +157,20 @@
             <div class="setting-row">
                 <label>5 Cr and above:</label>
                 <input type="number" id="inc-tier4" value="25">
+            </div>
+            <hr style="border: 0; border-top: 1px solid #444; margin: 15px 0;">
+            <h3>Quick Base Prices (Lakhs)</h3>
+            <div class="setting-row">
+                <label>Base 1:</label>
+                <input type="number" id="base1-input" value="30">
+            </div>
+            <div class="setting-row">
+                <label>Base 2:</label>
+                <input type="number" id="base2-input" value="50">
+            </div>
+            <div class="setting-row">
+                <label>Base 3:</label>
+                <input type="number" id="base3-input" value="200">
             </div>
             <div class="modal-buttons">
                 <button class="btn-close" onclick="toggleSettings()">Cancel</button>
@@ -219,6 +239,14 @@
             }
         }
 
+        // NEW: Function to handle the quick base buttons
+        function setBase(baseInLakhs) {
+            if (window.event) window.event.stopPropagation();
+            currentAmount = parseFloat(baseInLakhs) * 100000;
+            bidHistory = [];
+            updateUI();
+        }
+
         // --- Spacebar Logic ---
         document.addEventListener('keydown', function(event) {
             // Check if user is typing in an input field (so space doesn't trigger bid)
@@ -230,6 +258,10 @@
             if (event.code === 'Space') {
                 event.preventDefault(); // Prevent page from scrolling down
                 advanceBid();
+            }
+            else if (event.code === 'KeyK' || event.key === 'k') {
+                event.preventDefault(); // Prevent accidental typing
+                undoBid();
             }
         });
 
@@ -248,6 +280,22 @@
             incTier2 = parseFloat(document.getElementById('inc-tier2').value) * 100000 || incTier2;
             incTier3 = parseFloat(document.getElementById('inc-tier3').value) * 100000 || incTier3;
             incTier4 = parseFloat(document.getElementById('inc-tier4').value) * 100000 || incTier4;
+            // NEW: Save custom base prices and update button text/logic
+            let b1 = document.getElementById('base1-input').value || 30;
+            let b2 = document.getElementById('base2-input').value || 50;
+            let b3 = document.getElementById('base3-input').value || 200;
+
+            let btn1 = document.getElementById('btn-base1');
+            btn1.setAttribute('onclick', `setBase(${b1})`);
+            btn1.innerText = `Base: ${b1 >= 100 ? (b1/100)+'Cr' : b1+'L'}`;
+
+            let btn2 = document.getElementById('btn-base2');
+            btn2.setAttribute('onclick', `setBase(${b2})`);
+            btn2.innerText = `Base: ${b2 >= 100 ? (b2/100)+'Cr' : b2+'L'}`;
+
+            let btn3 = document.getElementById('btn-base3');
+            btn3.setAttribute('onclick', `setBase(${b3})`);
+            btn3.innerText = `Base: ${b3 >= 100 ? (b3/100)+'Cr' : b3+'L'}`;
             
             updateUI(); // Refresh next bid UI
             toggleSettings();
